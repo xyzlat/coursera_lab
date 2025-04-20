@@ -4,6 +4,7 @@ import unittest
 import tempfile
 import logging
 from unittest.mock import patch, MagicMock
+import io
 
 # Add parent directory to path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -99,3 +100,39 @@ class TestLogging(unittest.TestCase):
     def test_test_logger(self):
         """Test the test logger class"""
         # Capture stdout to verify console logging
+        captured_output = io.StringIO()
+        with patch('sys.stdout', new=captured_output):
+            # Create test logger
+            test_logger = TestLogger("test_logger")
+            
+            # Log a message
+            test_message = "Test log message for test environment"
+            test_logger.info(test_message)
+            
+            # Check output
+            output = captured_output.getvalue()
+            self.assertIn(test_message, output)
+            self.assertIn("TEST", output)
+    
+    def test_logger_factory_functions(self):
+        """Test the logger factory functions"""
+        # Test the get_test_logger function
+        test_logger = get_test_logger("factory_test")
+        self.assertIsInstance(test_logger, TestLogger)
+        self.assertEqual(test_logger.logger.name, "test_factory_test")
+        
+        # Test the get_production_logger function
+        prod_logger = get_production_logger("factory_prod", self.log_file)
+        self.assertIsInstance(prod_logger, ProductionLogger)
+        self.assertEqual(prod_logger.environment, "production")
+        
+        # Log a message with the production logger
+        prod_logger.info("Factory logger test")
+        
+        # Check that the message was written to file
+        with open(self.log_file, 'r') as f:
+            log_content = f.read()
+            self.assertIn("Factory logger test", log_content)
+
+if __name__ == "__main__":
+    unittest.main()
